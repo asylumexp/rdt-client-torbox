@@ -4,6 +4,9 @@ using TorBoxNET;
 using RdtClient.Data.Enums;
 using RdtClient.Data.Models.TorrentClient;
 using System.Web;
+using RdtClient.Data.Models.Internal;
+using RdtClient.Data.Models.Data;
+using RdtClient.Data.Data;
 
 namespace RdtClient.Service.Services.TorrentClients;
 
@@ -286,10 +289,18 @@ public class TorBoxTorrentClient(ILogger<TorBoxTorrentClient> logger, IHttpClien
 
         var torrentId = await GetClient().Torrents.GetHashInfoAsync(torrent.Hash, skipCache: true);
 
-        foreach (var file in torrent.Files)
+        if (torrent.Files.Count >= 50)
         {
-            var newFile = $"https://torbox.app/fakedl/{torrentId?.Id}/{file.Id}";
+            var newFile = $"https://torbox.app/fakedl/{torrentId?.Id}/zip";
             files.Add(newFile);
+        }
+        else
+        {
+            foreach (var file in torrent.Files)
+            {
+                var newFile = $"https://torbox.app/fakedl/{torrentId?.Id}/{file.Id}";
+                files.Add(newFile);
+            }
         }
 
         return files;
@@ -306,6 +317,7 @@ public class TorBoxTorrentClient(ILogger<TorBoxTorrentClient> logger, IHttpClien
 
         using (HttpClient client = new())
         {
+            client.Timeout = TimeSpan.FromSeconds(Settings.Get.Provider.Timeout);
             var request = new HttpRequestMessage(HttpMethod.Head, uri);
             var response = await client.SendAsync(request);
             if (response.Content.Headers.ContentDisposition != null)
